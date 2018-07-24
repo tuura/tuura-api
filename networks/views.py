@@ -3,6 +3,8 @@ import json
 from rq import Queue
 from redis import Redis
 from django.http import HttpResponse
+from django.http import HttpResponseBadRequest
+from django.http import HttpResponseNotFound
 from django.http import JsonResponse
 from django.views import View
 from django.shortcuts import render
@@ -18,8 +20,7 @@ def jsonify(handler):
 
     def inner(self, request):
         request_json = json.loads(request.body) if request.body else {}
-        results = handler(self, request_json)
-        return JsonResponse(results)
+        return handler(self, request_json)
 
     return inner
 
@@ -35,7 +36,8 @@ class Jobs(View):
     def put(self, request):
         x = int(request.get("x", "0"))
         job = job_queue.enqueue("worker.analyze_network", x)
-        return {"result": "queued for processing", "id": job.id}
+        response = {"status": "queued for processing", "id": job.id}
+        return JsonResponse(response)
 
 
     @jsonify
@@ -44,11 +46,18 @@ class Jobs(View):
         job_id = request.get("id")
 
         if not job_id:
-            return get_error("job id missing")
+            return HttpResponseBadRequest()
 
         job = job_queue.fetch_job(job_id)
 
         if not job:
-            return get_error("invalid job id")
+            return HttpResponseNotFound()
 
-        return {"result": "success", "job output": job.result}
+        if job.is_finished:
+            response = {"status": "completed", "result": job.result}
+        elif job.is_queued:
+            response = {"status": "queued for processing"}
+        elif job.is_started:
+            response = {"status": "in progress"}
+
+        return JsonResponse(response)
