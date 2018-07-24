@@ -1,5 +1,5 @@
 import time
 
 def analyze_network(x):
-    time.sleep(1)
+    time.sleep(20)
     return {"y": x + 1}
