@@ -1,7 +1,14 @@
+import json
+
+from rq import Queue
+from redis import Redis
 from django.http import HttpResponse
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
+
+
+job_queue = Queue(connection=Redis())
 
 
 def restful(handler):
@@ -31,6 +38,28 @@ def api(func):
     return func
 
 
+def get_error(msg):
+    return {"result": "error", "description": msg}
+
+
 @api
-def hello(request):
-    return {"result": "Hello networks!"}
+def jobs(request):
+    x = int(request.get("x", "0"))
+    job = job_queue.enqueue("worker.analyze_network", x)
+    return {"result": "queued for processing", "id": job.id}
+
+
+@api
+def results(request):
+
+    job_id = request.get("id")
+
+    if not job_id:
+        return get_error("job id missing")
+
+    job = job_queue.fetch_job(job_id)
+
+    if not job:
+        return get_error("invalid job id")
+
+    return {"result": "success", "job output": job.result}
