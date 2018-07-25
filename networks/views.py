@@ -5,6 +5,7 @@ from redis import Redis
 from django.http import HttpResponse
 from django.http import HttpResponseBadRequest
 from django.http import HttpResponseNotFound
+from django.http import HttpResponseServerError
 from django.http import JsonResponse
 from django.views import View
 from django.shortcuts import render
@@ -25,17 +26,14 @@ def jsonify(handler):
     return inner
 
 
-def get_error(msg):
-    return {"result": "error", "description": msg}
-
-
 @method_decorator(csrf_exempt, name='dispatch')
 class Jobs(View):
 
     @jsonify
     def put(self, request):
-        x = int(request.get("x", "0"))
-        job = job_queue.enqueue("worker.analyze_network", x)
+
+        graphml = request.get("graph")
+        job = job_queue.enqueue("worker.analyze_network", graphml)
         response = {"status": "queued for processing", "id": job.id}
         return JsonResponse(response)
 
@@ -48,7 +46,10 @@ class Jobs(View):
         if not job_id:
             return HttpResponseBadRequest("missing job id")
 
-        job = job_queue.fetch_job(job_id)
+        try:
+            job = job_queue.fetch_job(job_id)
+        except:
+            return HttpResponseServerError("backend queue unavailable")
 
         if not job:
             return HttpResponseNotFound("job not found")
