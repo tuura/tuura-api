@@ -46,12 +46,12 @@ class Jobs(View):
         job_id = request.get("id")
 
         if not job_id:
-            return HttpResponseBadRequest()
+            return HttpResponseBadRequest("missing job id")
 
         job = job_queue.fetch_job(job_id)
 
         if not job:
-            return HttpResponseNotFound()
+            return HttpResponseNotFound("job not found")
 
         if job.is_finished:
             response = {"status": "completed", "result": job.result}
