@@ -92,13 +92,13 @@ def bfs(graph, root):
     while True:
         neighbours = set()  # neighbours of all nodes in `to_visit`
         for src in to_visit:
-            neighbours = neighbours | edge_map[src]
+            neighbours.update(edge_map[src])
         discovered = neighbours - visited
         if not discovered:
             break
         node_counts.append(len(discovered))
         to_visit = discovered
-        visited = visited | discovered
+        visited.update(discovered)
 
     return node_counts
 
