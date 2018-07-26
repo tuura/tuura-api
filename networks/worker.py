@@ -126,14 +126,14 @@ def calculate_mean_asp(graph):
     return mean([asp for asp in node_asps if asp])
 
 
-def perturb(graph, remove_max, nrepeats, granularity, method):
+def perturb(graphml, remove_max, nrepeats, granularity, method):
     """Calculate node removal perturbation statistics.
 
     Run a sweep analysis, each time removing k random nodes and calculating
     ASP statistics (based on `nrepeats` trials).
 
     Args:
-        - graph (graph)      : input graph
+        - graphml (str)      : input graph (graphml file content)
         - remove_max (float) : fraction of nodes to remove
         - nrepeats (int)     : repeats per k
         - granularity (int)  : k step size
@@ -148,6 +148,11 @@ def perturb(graph, remove_max, nrepeats, granularity, method):
     Returns:
         results (JSON object)
     """
+
+    try:
+        graph = load_graphml(graphml)
+    except Exception:
+        return {"error": "could not parse graphml file"}
 
     def select_random_nodes(graph, k):
         return random.sample(graph["nodes"], k)
@@ -208,12 +213,12 @@ def read_file(file):
 
 def main():
     args = docopt.docopt(usage, version="v0.1")
-    graph = load_graphml(read_file(args["<file.graphml>"]))
+    graphml = read_file(args["<file.graphml>"])
     method = args["--method"]
     nrepeats = int(args["--repeats"])
     remove_max = float(args["--max"])
     granularity = int(args["--granularity"])
-    results = perturb(graph, remove_max, nrepeats, granularity, method)
+    results = perturb(graphml, remove_max, nrepeats, granularity, method)
     print(json.dumps(results, indent=4))
 
 

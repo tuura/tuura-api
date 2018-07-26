@@ -32,8 +32,32 @@ class Jobs(View):
     @jsonify
     def put(self, request):
 
-        graphml = request.get("graph")
-        job = job_queue.enqueue("worker.analyze_network", graphml)
+        required_fields = [
+            ("graphml", str),
+            ("remove_max", float),
+            ("nrepeats", int),
+            ("granularity", int),
+            ("method", str),
+        ]
+
+        # Check that fields are present
+
+        for fd, _ in required_fields:
+            if not fd in request:
+                return HttpResponseBadRequest("missing %s field" % fd)
+
+        # Check that field values can be cast to field types
+
+        perturb_args = {}
+
+        for fd, fd_type in required_fields:
+            try:
+                perturb_args[fd] = fd_type(request[fd])
+            except ValueError:
+                body = "field %s must be of type %s" % (fd, fd_type.__name__)
+                return HttpResponseBadRequest(body)
+
+        job = job_queue.enqueue("worker.perturb", **perturb_args, timeout=180)
         response = {"status": "queued for processing", "id": job.id}
         return JsonResponse(response)
 
@@ -60,5 +84,7 @@ class Jobs(View):
             response = {"status": "queued for processing"}
         elif job.is_started:
             response = {"status": "in progress"}
+        elif job.is_failed:
+            response = {"status": "job failed"}
 
         return JsonResponse(response)
