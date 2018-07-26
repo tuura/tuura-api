@@ -9,7 +9,6 @@ from django.http import HttpResponseNotFound
 from django.http import HttpResponseServerError
 from django.http import JsonResponse
 from django.views import View
-from django.shortcuts import render
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 
@@ -18,24 +17,13 @@ job_queue = Queue(connection=Redis())
 job_ids = {}  # map (job id) -> (rq id)
 
 
-def jsonify(handler):
-    """Create a Django view from a function with type json -> json."""
-
-    def inner(self, request):
-        request_json = json.loads(request.body) if request.body else {}
-        return handler(self, request_json)
-
-    return inner
-
-
 @method_decorator(csrf_exempt, name='dispatch')
 class Jobs(View):
 
-    @jsonify
     def put(self, request):
 
+        body = json.loads(request.body) if request.body else {}
         timeout = 180  # job timeout (seconds)
-
         job_id_digits = 3
 
         required_fields = [
@@ -54,7 +42,7 @@ class Jobs(View):
         # Check that fields are present
 
         for fd, _ in required_fields:
-            if not fd in request:
+            if not fd in body:
                 return HttpResponseBadRequest("missing %s field" % fd)
 
         # Check that field values can be cast to field types
@@ -63,7 +51,7 @@ class Jobs(View):
 
         for fd, fd_type in required_fields:
             try:
-                perturb_args[fd] = fd_type(request[fd])
+                perturb_args[fd] = fd_type(body[fd])
             except ValueError:
                 body = "field %s must be of type %s" % (fd, fd_type.__name__)
                 return HttpResponseBadRequest(body)
@@ -75,7 +63,6 @@ class Jobs(View):
         return JsonResponse(response)
 
 
-    # @jsonify
     def get(self, request, job_id):
 
         if not job_id:
