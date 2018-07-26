@@ -1,7 +1,9 @@
 import time
 import random
 
+from collections import Counter
 from collections import defaultdict
+from statistics import pstdev
 from xml.etree import ElementTree as ET
 
 
@@ -43,7 +45,7 @@ def reduce_graph(graph, predicate):
 
     """
 
-    nodes = filter(predicate, graph["nodes"])
+    nodes = [node for node in graph["nodes"] if predicate(node)]
 
     edge_list = [
         (src, dst) for src, dst in graph["edges"]
@@ -60,85 +62,121 @@ def get_edge_map(graph):
     return result
 
 
-def bfs(graph, node):
+def bfs(graph, root):
+    """Run BFS from a root node.
 
-    visited = {node}
-    to_visit = {node}
+    Return:
+        Number of nodes discovered in each round (list)
+    """
+
+    visited = {root}
+    to_visit = {root}
     edge_map = get_edge_map(graph)
-    distances = []
+    node_counts = []
 
     while True:
-
         neighbours = set()  # neighbours of all nodes in `to_visit`
-
         for src in to_visit:
-            neighbours = neighbours or edge_map[src]
-
+            neighbours = neighbours | edge_map[src]
         discovered = neighbours - visited
-
         if not discovered:
             break
-
-        distances.append(len(discovered))
+        node_counts.append(len(discovered))
         to_visit = discovered
         visited = visited | discovered
 
-    print (distances)
-    return distances
+    return node_counts
 
 
 def mean(nums):
     return float(sum(nums)) / max(len(nums), 1)
 
 
-def calculate_asp(graph):
+def calculate_mean_asp(graph):
+    """Calculate ASP of a graph."""
 
-    mean_distances = [mean(bfs(graph, node)) for node in graph["nodes"][10:]]
-    return mean(mean_distances)
+    def calculate_asp(root):
+        """Calculate mean ASP for paths starting with root."""
+        node_counts = bfs(graph, root)
+        weighed = [
+            node_count * distance
+            for node_count, distance
+            in zip(node_counts, range(1, len(node_counts)+1))
+        ]
+        # Note: node_counts is [] for disconnected roots
+        return sum(weighed) / sum(node_counts) if node_counts else None
+
+    node_asps = [calculate_asp(root) for root in graph["nodes"]]
+    return mean([asp for asp in node_asps if asp])
 
 
-
-def analyze_perturbation(graph, mx, nrepeats, granularity):
+def analyze_perturbation(graph, remove_max, nrepeats, granularity, method):
     """Analyze node removal purturbation.
 
-    Run a sweep analysis, each time removing a number k of random nodes and
-    calculating ASP nrepeats times.
+    Run a sweep analysis, each time removing k random nodes and calculating
+    ASP nrepeats times.
 
-    Maximum value of k is (mx * |nodes|)
+    Maximum value of k is (remove_max * |nodes|)
 
     Args:
-        - graph (graph)     : input graph
-        - mx (float)        : fraction of nodes to remove
-        - repeat (int)      : repeats per
-        - granularity (int) : k step size
+        - graph (graph)      : input graph
+        - remove_max (float) : fraction of nodes to remove
+        - repeat (int)       : repeats per
+        - granularity (int)  : k step size
+        - method (str)       : node selection method ("random" or "outdegree")
 
     Return:
         dictionary: k -> [asp]
     """
 
-    def get_petrubed_asp(k):
-        removed = random.sample(graph["nodes"], k)  # removed nodes
-        sampled_graph = reduce_graph(graph, lambda node: node not in removed)
-        return calculate_asp(sampled_graph)
+    def select_random_nodes(graph, k):
+        return random.sample(graph["nodes"], k)
 
-    max_k = int(mx * len(graph["nodes"]))
+    def select_most_connected(graph, k):
+        outdegrees = Counter([src for src, _ in graph["edges"]])
+        return [src for src, count in outdegrees.most_common(k)]
 
-
-    results = {
-        k: [get_petrubed_asp(graph, k) for _ in nrepeats]
-        for k in range(1, max_k, granularity)
+    selectors = {
+        "random": select_random_nodes,
+        "outdegree": select_most_connected
     }
 
-    return results
+    try:
+        selector = selectors[method]
+    except KeyError:
+        return {
+            "error": "invalid method"
+        }
 
+    def get_petrubed_asp(k):
+        removed = selector(graph, k)  # pick nodes to remove
+        sampled_graph = reduce_graph(graph, lambda node: node not in removed)
+        return calculate_mean_asp(sampled_graph)
 
-def analyze_network(graphml):
+    max_k = int(remove_max * len(graph["nodes"]))
 
-    graph = load_graphml(graphml)
+    if method == "outdegree":
+        # Force nrepeats = 1 when selecting nodes to remove by outdegree since
+        # repeated trials will return the same results.
+        nrepeats = 1
+
+    purturbed_asps = [[get_petrubed_asp(k) for _ in range(nrepeats)]
+                      for k in range(1, max_k, granularity)]
+
+    def map_asps(func):
+        return [func(vals) for vals in purturbed_asps]
 
     return {
         "node-count": len(graph["nodes"]),
-        "edge-count": len(graph["edges"])
+        "edge-count": len(graph["edges"]),
+        "repeats": nrepeats,
+        "nodes-removed": list(range(1, max_k, granularity)),
+        "asp": {
+            "mean": map_asps(mean),
+            "min": map_asps(min),
+            "max": map_asps(max),
+            "std": map_asps(pstdev),
+        }
     }
 
 
@@ -149,10 +187,14 @@ def read_file(file):
 
 
 def main():
-    file = "n2.graphml"
-    graphml = read_file(file)
+    graphml = read_file("n2.graphml")
     graph = load_graphml(graphml)
-    print(calculate_asp(graph))
+    mx = 1
+    nrepeats = 20
+    granularity = 2
+    results = analyze_perturbation(graph, mx, nrepeats, granularity, "outdegree")
+    import json
+    print(json.dumps(results, indent=4))
 
 
 if __name__ == '__main__':
