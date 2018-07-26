@@ -1,10 +1,26 @@
 import time
+import json
+import docopt
 import random
 
+from xml.etree import ElementTree as ET
+from statistics import pstdev
 from collections import Counter
 from collections import defaultdict
-from statistics import pstdev
-from xml.etree import ElementTree as ET
+
+
+usage = """Network Analysis Worker (v0.1)
+
+Usage:
+  worker.py [options] <file.graphml>
+
+Options:
+  --max=<float>        Maximum fraction of nodes to remove [default: 0.5].
+  --repeats=<int>      Repeats per data point [default: 10].
+  --granularity=<int>  Step size of nodes removed [default: 2].
+  --method=<str>       Node selection method [default: random]
+
+"""
 
 
 def load_graphml(graphml_str):
@@ -47,15 +63,14 @@ def reduce_graph(graph, predicate):
 
     nodes = [node for node in graph["nodes"] if predicate(node)]
 
-    edge_list = [
-        (src, dst) for src, dst in graph["edges"]
-        if (src in nodes and dst in nodes)
-    ]
+    edge_list = [(src, dst) for src, dst in graph["edges"]
+                 if (src in nodes and dst in nodes)]
 
     return {"nodes": nodes, "edges": edge_list}
 
 
 def get_edge_map(graph):
+    """Return a map: src node -> set of destinations."""
     result = defaultdict(set)
     for src, dst in graph["edges"]:
         result[src].add(dst)
@@ -65,7 +80,7 @@ def get_edge_map(graph):
 def bfs(graph, root):
     """Run BFS from a root node.
 
-    Return:
+    Returns:
         Number of nodes discovered in each round (list)
     """
 
@@ -89,6 +104,7 @@ def bfs(graph, root):
 
 
 def mean(nums):
+    """Calculate mean of numbers."""
     return float(sum(nums)) / max(len(nums), 1)
 
 
@@ -110,23 +126,27 @@ def calculate_mean_asp(graph):
     return mean([asp for asp in node_asps if asp])
 
 
-def analyze_perturbation(graph, remove_max, nrepeats, granularity, method):
-    """Analyze node removal purturbation.
+def perturb(graph, remove_max, nrepeats, granularity, method):
+    """Calculate node removal perturbation statistics.
 
     Run a sweep analysis, each time removing k random nodes and calculating
-    ASP nrepeats times.
-
-    Maximum value of k is (remove_max * |nodes|)
+    ASP statistics (based on `nrepeats` trials).
 
     Args:
         - graph (graph)      : input graph
         - remove_max (float) : fraction of nodes to remove
-        - repeat (int)       : repeats per
+        - nrepeats (int)     : repeats per k
         - granularity (int)  : k step size
         - method (str)       : node selection method ("random" or "outdegree")
 
-    Return:
-        dictionary: k -> [asp]
+    Maximum number of removed nodes is (remove_max * |nodes|)
+
+    Node selection methods:
+        - random    : select random k nodes
+        - outdegree : select k nodes with highest outdegree (forces nrepeats=1)
+
+    Returns:
+        results (JSON object)
     """
 
     def select_random_nodes(graph, k):
@@ -156,15 +176,15 @@ def analyze_perturbation(graph, remove_max, nrepeats, granularity, method):
     max_k = int(remove_max * len(graph["nodes"]))
 
     if method == "outdegree":
-        # Force nrepeats = 1 when selecting nodes to remove by outdegree since
-        # repeated trials will return the same results.
+        # Force nrepeats = 1 when selecting nodes to remove by outdegree (since
+        # repeated trials return identical results).
         nrepeats = 1
 
-    purturbed_asps = [[get_petrubed_asp(k) for _ in range(nrepeats)]
+    perturbed_asps = [[get_petrubed_asp(k) for _ in range(nrepeats)]
                       for k in range(1, max_k, granularity)]
 
     def map_asps(func):
-        return [func(vals) for vals in purturbed_asps]
+        return [func(vals) for vals in perturbed_asps]
 
     return {
         "node-count": len(graph["nodes"]),
@@ -187,13 +207,13 @@ def read_file(file):
 
 
 def main():
-    graphml = read_file("n2.graphml")
-    graph = load_graphml(graphml)
-    mx = 1
-    nrepeats = 20
-    granularity = 2
-    results = analyze_perturbation(graph, mx, nrepeats, granularity, "outdegree")
-    import json
+    args = docopt.docopt(usage, version="v0.1")
+    graph = load_graphml(read_file(args["<file.graphml>"]))
+    method = args["--method"]
+    nrepeats = int(args["--repeats"])
+    remove_max = float(args["--max"])
+    granularity = int(args["--granularity"])
+    results = perturb(graph, remove_max, nrepeats, granularity, method)
     print(json.dumps(results, indent=4))
 
 
