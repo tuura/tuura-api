@@ -28,6 +28,13 @@ def jsonify(handler):
     return inner
 
 
+def make_error(status_code, msg):
+    """Return JsonResponse object describing an error."""
+    response = JsonResponse({"error": msg})
+    response.status_code = status_code
+    return response
+
+
 @method_decorator(csrf_exempt, name='dispatch')
 class Jobs(View):
 
@@ -55,7 +62,7 @@ class Jobs(View):
 
         for fd, _ in required_fields:
             if not fd in request:
-                return HttpResponseBadRequest("missing %s field" % fd)
+                return make_error(400, "missing %s field" % fd)
 
         # Check that field values can be cast to field types
 
@@ -65,40 +72,41 @@ class Jobs(View):
             try:
                 perturb_args[fd] = fd_type(request[fd])
             except ValueError:
-                body = "field %s must be of type %s" % (fd, fd_type.__name__)
-                return HttpResponseBadRequest(body)
+                return make_error(400, "field %s must be of type %s" % (fd, fd_type.__name__))
 
-        job = job_queue.enqueue("worker.perturb", **perturb_args, timeout=timeout)
+        try:
+            job = job_queue.enqueue("worker.perturb", **perturb_args, timeout=timeout)
+        except:
+            return make_error(500, "backend queue unavailable")
+
         job_id = create_job_id()
         job_ids[job_id] = job.id
         response = {"status": "queued for processing", "id": job_id}
         return JsonResponse(response)
 
-
-    # @jsonify
     def get(self, request, job_id):
 
         if not job_id:
-            return HttpResponseBadRequest("missing job id")
+            return make_error(400, "missing job id")
 
         if job_id not in job_ids:
-            return HttpResponseBadRequest("invalid job id")
+            return make_error(404, "invalid job id")
 
         try:
             job = job_queue.fetch_job(job_ids[job_id])
         except:
-            return HttpResponseServerError("backend queue unavailable")
+            return make_error(500, "backend queue unavailable")
 
         if not job:
-            return HttpResponseNotFound("job not found")
+            return make_error(400, "job not found")
 
         if job.is_finished:
-            response = {"status": "completed", "result": job.result}
+            return JsonResponse({"status": "completed", "result": job.result})
         elif job.is_queued:
-            response = {"status": "queued for processing"}
+            return JsonResponse({"status": "queued for processing"})
         elif job.is_started:
-            response = {"status": "in progress"}
+            return JsonResponse({"status": "in progress"})
         elif job.is_failed:
-            response = {"status": "job failed"}
+            return JsonResponse({"status": "job failed"})
 
-        return JsonResponse(response)
+        return make_error(500, "job information unavailable")
