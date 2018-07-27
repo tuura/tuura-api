@@ -1,0 +1,237 @@
+
+swagger: "2.0"
+info:
+  description: "Various functions to analyze node removal impact measures on large networks"
+  version: "1.0.0"
+  title: "Tuura Network Analysis API"
+host: "tuura.org"
+basePath: "/api/networks/"
+tags:
+  - name: "jobs"
+    description: "Queue and get the results of network analysis jobs"
+schemes:
+  - "https"
+
+paths:
+
+  /jobs:
+    put:
+      tags:
+        - "jobs"
+      description: Queue a new network analysis job.
+      parameters:
+        - name: "body"
+          in: "body"
+          required: true
+          schema:
+            $ref: '#/definitions/job-request'
+      responses:
+        200:
+          description: Job accepted
+          schema:
+            $ref: '#/definitions/job-accepted'
+        400:
+          description: Job declined (bad request)
+          schema:
+            $ref: '#/definitions/error'
+        500:
+          description: Job declined (server error)
+          schema:
+            $ref: '#/definitions/error'
+
+  /jobs/{id}:
+    get:
+      tags:
+        - "jobs"
+      parameters:
+        - name: "id"
+          in: "path"
+          description: "Job ID"
+          required: true
+          type: "string"
+      responses:
+        400:
+          description: Missing job id (bad request)
+          schema:
+            $ref: '#/definitions/error'
+        404:
+          description: Job not found
+          schema:
+            $ref: '#/definitions/error'
+        500:
+          description: Job status unavailable (server error)
+          schema:
+            $ref: '#/definitions/error'
+        200:
+          description: Job found
+          schema:
+            $ref: '#/definitions/status'
+
+definitions:
+
+  job-request:
+    type: "object"
+    properties:
+      graphml:
+        type: "string"
+        description: Network to analyze
+      method:
+        type: "string"
+        description: How to select nodes for removal ('random' or 'outdegree')
+      nrepeats:
+        type: "integer"
+        description: Repeats per analysis point (number of removed nodes)
+      remove_max:
+        type: "number"
+        description: Maximum fraction of network nodes to remove
+      granularity:
+        type: "integer"
+        description: Step size between analysis points (number of removed nodes)
+    example:
+      granularity: '1'
+      graphml: <?xml version="1.0" encoding="UTF-8"?><graphml xmlns="http://graphml.graphdrawing.org/xmlns"xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd"><graph id="G" edgedefault="undirected"><node id="v00"/><node id="v01"/><node id="v02"/><node id="v03"/><node id="v04"/><node id="v05"/><node id="v06"/><node id="v07"/><node id="v08"/><node id="v09"/><node id="v10"/><node id="v11"/><node id="v12"/><node id="v13"/><node id="v14"/><edge source="v00" target="v01"/><edge source="v00" target="v02"/><edge source="v00" target="v03"/><edge source="v01" target="v04"/><edge source="v01" target="v05"/><edge source="v02" target="v05"/><edge source="v02" target="v06"/><edge source="v03" target="v06"/><edge source="v03" target="v07"/><edge source="v04" target="v08"/><edge source="v05" target="v08"/><edge source="v05" target="v09"/><edge source="v06" target="v09"/><edge source="v06" target="v10"/><edge source="v07" target="v10"/><edge source="v08" target="v11"/><edge source="v09" target="v12"/><edge source="v10" target="v13"/><edge source="v11" target="v12"/><edge source="v12" target="v14"/><edge source="v13" target="v12"/></graph></graphml>
+      method: random
+      nrepeats: 40
+      remove_max: 0.5
+
+  job-accepted:
+    type: "object"
+    properties:
+      status:
+        type: string
+    example:
+      status: queued for processing
+
+  error:
+    type: "object"
+    properties:
+      error:
+        type: string
+    example:
+      error: something went wrong
+
+  status:
+    type: "object"
+    properties:
+      status:
+        type: string
+      result:
+        $ref: '#/definitions/result'
+    example:
+      status: completed
+      result:
+        node-count: 87
+        edge-count: 808
+        repeats: 10
+        nodes-removed:
+          - 1
+          - 3
+          - 5
+          - 7
+          - 9
+          - 11
+          - 13
+          - 15
+        asp:
+          mean:
+            - 2.3792065663474697
+            - 2.374575381754602
+            - 2.3999779405318664
+            - 2.4253313458693215
+            - 2.3975086386781093
+            - 2.439460511701319
+            - 2.454888929900071
+            - 2.4412980420557817
+          min:
+            - 2.3570451436388518
+            - 2.2873417721518985
+            - 2.3634447455585668
+            - 2.3746835443037986
+            - 2.2582159624413145
+            - 2.339874120696038
+            - 2.3380229544613105
+            - 2.3599374021909254
+          max:
+            - 2.394528043775649
+            - 2.397884219806054
+            - 2.4724683544303794
+            - 2.506160506160506
+            - 2.5731210662717503
+            - 2.5168456127360237
+            - 2.5564605701591994
+            - 2.5430201931518877
+          std:
+            - 0.010714420052802065
+            - 0.03127109871541596
+            - 0.029484172642294526
+            - 0.04328854517873046
+            - 0.0785588198276351
+            - 0.05549820761994588
+            - 0.0687712527061233
+            - 0.05446174216606991
+
+
+  result:
+    type: object
+    properties:
+      node-count:
+        type: integer
+      edge-count:
+        type: integer
+      repeats:
+        type: integer
+      nodes-removed:
+        type: array
+        items:
+          type: integer
+    example:
+      node-count: 87
+      edge-count: 808
+      repeats: 10
+      nodes-removed:
+        - 1
+        - 3
+        - 5
+        - 7
+        - 9
+        - 11
+        - 13
+        - 15
+      asp:
+        mean:
+          - 2.3792065663474697
+          - 2.374575381754602
+          - 2.3999779405318664
+          - 2.4253313458693215
+          - 2.3975086386781093
+          - 2.439460511701319
+          - 2.454888929900071
+          - 2.4412980420557817
+        min:
+          - 2.3570451436388518
+          - 2.2873417721518985
+          - 2.3634447455585668
+          - 2.3746835443037986
+          - 2.2582159624413145
+          - 2.339874120696038
+          - 2.3380229544613105
+          - 2.3599374021909254
+        max:
+          - 2.394528043775649
+          - 2.397884219806054
+          - 2.4724683544303794
+          - 2.506160506160506
+          - 2.5731210662717503
+          - 2.5168456127360237
+          - 2.5564605701591994
+          - 2.5430201931518877
+        std:
+          - 0.010714420052802065
+          - 0.03127109871541596
+          - 0.029484172642294526
+          - 0.04328854517873046
+          - 0.0785588198276351
+          - 0.05549820761994588
+          - 0.0687712527061233
+          - 0.05446174216606991
+
