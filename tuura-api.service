@@ -1,0 +1,14 @@
+[Unit]
+Description=tuura-api
+After=network.target
+
+[Service]
+ExecStart=/var/www/tuura.org/tuura-api/env/bin/gunicorn --pythonpath /var/www/tuura.org/tuura-api/tuura -w 2 tuura.wsgi
+Type=simple
+User=gtarawneh
+Group=gtarawneh
+Environment="DJANGO_DEBUG=False"
+
+[Install]
+WantedBy=multi-user.target
+
