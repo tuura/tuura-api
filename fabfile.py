@@ -31,11 +31,10 @@ def deploy():
         virtenv("./manage.py collectstatic --no-input --verbosity 0")
 
         # Setup systemd service
-        put("tuura-api.service", "/etc/systemd/system/multi-user.target.wants/tuura-api.service", use_sudo=True)
-        sudo("systemctl daemon-reload")
-        sudo("systemctl restart tuura-api")
-        sudo("sudo systemctl --no-pager status tuura-api")
+        for service in ["tuura-api", "networks-worker"]:
+            put("%s.service" % service, "/etc/systemd/system/multi-user.target.wants/%s.service" % service, use_sudo=True)
+            sudo("systemctl daemon-reload")
+            sudo("systemctl restart %s" % service)
+            sudo("sudo systemctl --no-pager status %s" % service)
 
         sudo("chown -R :www-data .")
-        # run("sudo service eqweb restart")
-

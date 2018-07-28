@@ -29,7 +29,8 @@ class Jobs(View):
 
     def put(self, request):
 
-        rjson = json.loads(request.body) if request.body else {}
+        req_body_str = str(request.body, 'utf-8')
+        rjson = json.loads(req_body_str) if request.body else {}
         timeout = 180  # job timeout (seconds)
         job_id_digits = 3
 

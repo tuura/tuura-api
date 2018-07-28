@@ -1,0 +1,13 @@
+[Unit]
+Description=networks-worker
+After=network.target
+
+[Service]
+ExecStart=/var/www/tuura.org/tuura-api/env/bin/rq worker -P /var/www/tuura.org/tuura-api/networks
+Type=simple
+User=gtarawneh
+Group=gtarawneh
+
+[Install]
+WantedBy=multi-user.target
+
