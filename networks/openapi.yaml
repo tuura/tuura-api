@@ -1,7 +1,7 @@
 
 swagger: "2.0"
 info:
-  description: "Various functions to analyze node removal impact measures on large networks"
+  description: "Functions to analyze node removal impact measures on large networks"
   version: "1.0.0"
   title: "Tuura Network Analysis API"
 host: "tuura.org"
@@ -29,7 +29,7 @@ paths:
         200:
           description: Job accepted
           schema:
-            $ref: '#/definitions/job-accepted'
+            $ref: '#/definitions/status'
         400:
           description: Job declined (bad request)
           schema:
@@ -89,18 +89,16 @@ definitions:
         description: Step size between analysis points (number of removed nodes)
     example:
       granularity: '1'
-      graphml: <?xml version="1.0" encoding="UTF-8"?><graphml xmlns="http://graphml.graphdrawing.org/xmlns"xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd"><graph id="G" edgedefault="undirected"><node id="v00"/><node id="v01"/><node id="v02"/><node id="v03"/><node id="v04"/><node id="v05"/><node id="v06"/><node id="v07"/><node id="v08"/><node id="v09"/><node id="v10"/><node id="v11"/><node id="v12"/><node id="v13"/><node id="v14"/><edge source="v00" target="v01"/><edge source="v00" target="v02"/><edge source="v00" target="v03"/><edge source="v01" target="v04"/><edge source="v01" target="v05"/><edge source="v02" target="v05"/><edge source="v02" target="v06"/><edge source="v03" target="v06"/><edge source="v03" target="v07"/><edge source="v04" target="v08"/><edge source="v05" target="v08"/><edge source="v05" target="v09"/><edge source="v06" target="v09"/><edge source="v06" target="v10"/><edge source="v07" target="v10"/><edge source="v08" target="v11"/><edge source="v09" target="v12"/><edge source="v10" target="v13"/><edge source="v11" target="v12"/><edge source="v12" target="v14"/><edge source="v13" target="v12"/></graph></graphml>
+      graphml: >
+        <?xml version="1.0" encoding="UTF-8"?>
+        <graphml xmlns="http://graphml.graphdrawing.org/xmlns" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd">
+          <graph id="graph" edgedefault="undirected">
+            <node id="n0"/><node id="n1"/><node id="n10"/><node id="n11"/><node id="n12"/><node id="n13"/><node id="n14"/><node id="n15"/><node id="n16"/><node id="n17"/><node id="n18"/><node id="n19"/><node id="n2"/><node id="n20"/><node id="n21"/><node id="n22"/><node id="n23"/><node id="n24"/><node id="n25"/><node id="n26"/><node id="n27"/><node id="n28"/><node id="n29"/><node id="n3"/><node id="n30"/><node id="n31"/><node id="n32"/><node id="n33"/><node id="n34"/><node id="n35"/><node id="n36"/><node id="n37"/><node id="n38"/><node id="n39"/><node id="n4"/><node id="n5"/><node id="n6"/><node id="n7"/><node id="n8"/><node id="n9"/><edge source="n0" target="n18"/>
+            <edge source="n0" target="n6"/><edge source="n1" target="n3"/><edge source="n1" target="n31"/><edge source="n10" target="n24"/><edge source="n10" target="n30"/><edge source="n10" target="n35"/><edge source="n10" target="n38"/><edge source="n10" target="n39"/><edge source="n11" target="n15"/><edge source="n11" target="n26"/><edge source="n12" target="n25"/><edge source="n13" target="n10"/><edge source="n13" target="n24"/><edge source="n13" target="n4"/><edge source="n14" target="n13"/><edge source="n14" target="n25"/><edge source="n14" target="n35"/><edge source="n15" target="n20"/><edge source="n15" target="n9"/><edge source="n16" target="n28"/><edge source="n16" target="n34"/><edge source="n17" target="n28"/><edge source="n17" target="n39"/><edge source="n18" target="n38"/><edge source="n18" target="n8"/><edge source="n2" target="n1"/><edge source="n2" target="n16"/><edge source="n2" target="n35"/><edge source="n2" target="n39"/><edge source="n20" target="n13"/><edge source="n20" target="n36"/><edge source="n21" target="n13"/><edge source="n21" target="n23"/><edge source="n21" target="n29"/><edge source="n22" target="n12"/><edge source="n22" target="n21"/><edge source="n22" target="n24"/><edge source="n22" target="n36"/><edge source="n23" target="n12"/><edge source="n23" target="n16"/><edge source="n23" target="n28"/><edge source="n23" target="n37"/><edge source="n24" target="n1"/><edge source="n24" target="n16"/><edge source="n24" target="n18"/><edge source="n24" target="n26"/><edge source="n24" target="n28"/><edge source="n24" target="n30"/><edge source="n25" target="n10"/><edge source="n25" target="n28"/><edge source="n26" target="n12"/><edge source="n26" target="n17"/><edge source="n26" target="n35"/><edge source="n27" target="n1"/><edge source="n27" target="n18"/><edge source="n27" target="n3"/><edge source="n27" target="n35"/><edge source="n28" target="n1"/><edge source="n28" target="n11"/><edge source="n28" target="n21"/><edge source="n28" target="n34"/><edge source="n29" target="n28"/><edge source="n29" target="n29"/><edge source="n29" target="n4"/><edge source="n3" target="n1"/><edge source="n3" target="n31"/><edge source="n3" target="n35"/><edge source="n32" target="n19"/><edge source="n32" target="n26"/><edge source="n32" target="n37"/><edge source="n32" target="n38"/><edge source="n32" target="n39"/><edge source="n33" target="n5"/><edge source="n34" target="n28"/><edge source="n34" target="n31"/><edge source="n34" target="n7"/><edge source="n36" target="n17"/><edge source="n36" target="n3"/><edge source="n36" target="n7"/><edge source="n37" target="n28"/><edge source="n38" target="n3"/><edge source="n38" target="n31"/><edge source="n4" target="n13"/><edge source="n4" target="n22"/><edge source="n5" target="n12"/><edge source="n5" target="n21"/><edge source="n6" target="n0"/><edge source="n6" target="n38"/><edge source="n6" target="n5"/><edge source="n7" target="n14"/><edge source="n7" target="n20"/><edge source="n8" target="n11"/><edge source="n8" target="n16"/><edge source="n8" target="n25"/><edge source="n8" target="n30"/><edge source="n9" target="n16"/><edge source="n9" target="n24"/><edge source="n9" target="n27"/><edge source="n9" target="n6"/></graph>
+        </graphml>
       method: random
       nrepeats: 40
       remove_max: 0.5
-
-  job-accepted:
-    type: "object"
-    properties:
-      status:
-        type: string
-    example:
-      status: queued for processing
 
   error:
     type: "object"
